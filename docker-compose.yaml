@@ -1,0 +1,45 @@
+services:
+  spark:
+    image: jupyter/pyspark-notebook
+    container_name: sparkstreaming
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+      - "4041:4041"
+    networks:
+      - streaming-net
+    volumes:
+      - ./work:/home/jovyan/work
+    environment:
+      JUPYTER_TOKEN: bigdata
+
+  broker:
+    image: apache/kafka:latest
+    container_name: broker
+    ports:
+      - "9092:9092" # Para conectar desde TU PC (fuera de Docker)
+    networks:
+      - streaming-net
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9093'
+      
+      # Definimos dos vías de comunicación:
+      # INTERNAL: Para otros contenedores (puerto 29092)
+      # EXTERNAL: Para tu PC (puerto 9092)
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:29092,CONTROLLER://localhost:9093,EXTERNAL://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://broker:29092,EXTERNAL://localhost:9092'
+      
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      
+      # Configuración básica para desarrollo
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+
+networks:
+  streaming-net:
+    driver: bridge
